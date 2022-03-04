@@ -19,10 +19,6 @@ on:
       domain_name:
         description: 'Amplify app configured domain'
         required: true
-      app_path:
-        description: 'Folder path to the client app root. Defaults to repository root'
-        required: false
-        default: .
     secrets:
       AMPLIFY_APP_ID:
         required: true
@@ -35,20 +31,11 @@ on:
         default: us-east-1
 
 jobs:
-  build:
+  upload-build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2.5.1
-        with:
-          node-version: '16'
-      
-      - name: Install dependencies, run build
-        run: |
-          cd ${{ inputs.app_path }}
-          npm install
-          npm build
 
       - name: zip built files and sync with s3 bucket
         run: |
