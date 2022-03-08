@@ -4,16 +4,8 @@ name: amplify-deploy
 on:
   workflow_call:
     inputs:
-      s3_bucket:
-        description: 'S3 bucket path. E.g. s3://<BUCKET_NAME>/'
-        required: true
-        type: string
       package_name:
         description: 'Name for the generated build zip that will be uploaded to S3'
-        required: true
-        type: string
-      build_path:
-        description: 'Folder path containing the generated build'
         required: true
         type: string
       branch_name:
@@ -35,21 +27,8 @@ on:
         required: false
 
 jobs:
-  upload-build:
+  deploy-branch:
     runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: zip built files and sync with s3 bucket
-        run: |
-          cd ${{ inputs.build_path }}
-          zip -r ${{ inputs.package_name }} *
-          aws s3 cp ${{ inputs.package_name }} ${{ inputs.s3_bucket }} --acl public-read
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [upload-build]
 
     steps:
       # this step will fail if the branch already exists
@@ -70,7 +49,7 @@ jobs:
 
   update-domains:
     runs-on: ubuntu-latest
-    needs: [deploy]
+    needs: [deploy-branch]
 
     steps:
       - name: get existing domain associations
