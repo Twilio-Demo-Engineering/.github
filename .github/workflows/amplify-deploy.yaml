@@ -33,7 +33,6 @@ on:
         required: true
       AWS_REGION:
         required: false
-        default: us-east-1
 
 jobs:
   upload-build:
