@@ -7,18 +7,23 @@ on:
       s3_bucket:
         description: 'S3 bucket path. E.g. s3://<BUCKET_NAME>/'
         required: true
+        type: string
       package_name:
         description: 'Name for the generated build zip that will be uploaded to S3'
         required: true
+        type: string
       build_path:
         description: 'Folder path containing the generated build'
         required: true
+        type: string
       branch_name:
         description: 'Amplify "branch" name'
         required: true
+        type: string
       domain_name:
         description: 'Amplify app configured domain'
         required: true
+        type: string
     secrets:
       AMPLIFY_APP_ID:
         required: true
