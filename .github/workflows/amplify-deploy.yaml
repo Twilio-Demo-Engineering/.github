@@ -4,6 +4,9 @@ name: amplify-deploy
 on:
   workflow_call:
     inputs:
+      environment: 
+        required: true
+        type: string
       package_name:
         description: 'Name for the generated build zip that will be uploaded to S3'
         required: true
@@ -26,6 +29,7 @@ on:
       AWS_REGION:
         required: false
 
+environment: ${{ inputs.environment }}
 env:
   amplify_app_id: ${{ secrets.AMPLIFY_APP_ID }}
   aws_region: ${{ secrets.AWS_REGION }}
