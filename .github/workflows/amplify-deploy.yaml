@@ -29,7 +29,6 @@ on:
       AWS_REGION:
         required: false
 
-environment: ${{ inputs.environment }}
 env:
   amplify_app_id: ${{ secrets.AMPLIFY_APP_ID }}
   aws_region: ${{ secrets.AWS_REGION }}
@@ -38,12 +37,15 @@ jobs:
   deploy-branch:
     runs-on: ubuntu-latest
 
+    environment: ${{ inputs.environment }}
     steps:
       - name: testing values
         run: |
           echo "${{ env.amplify_app_id }}"
           echo "${{ env.aws_region }}"
           echo "${{ secrets.AWS_ACCESS_KEY_ID }}"
+          echo "${{ secrets.AMPLIFY_APP_ID }}"
+          echo "${{ secrets.AMPLIFY_APP_ID }}"
       # this step will fail if the branch already exists
       # so we return 'true' to ensure it'll always pass
       - name: create amplify env
