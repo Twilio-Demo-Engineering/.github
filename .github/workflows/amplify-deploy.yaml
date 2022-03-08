@@ -26,26 +26,35 @@ on:
       AWS_REGION:
         required: false
 
+env:
+  amplify_app_id: ${{ secrets.AMPLIFY_APP_ID }}
+  aws_region: ${{ secrets.AWS_REGION }}
+
 jobs:
   deploy-branch:
     runs-on: ubuntu-latest
 
     steps:
+      - name: testing values
+        run: |
+          echo "${{ env.amplify_app_id }}"
+          echo "${{ env.aws_region }}"
+          echo "${{ secrets.AWS_ACCESS_KEY_ID }}"
       # this step will fail if the branch already exists
       # so we return 'true' to ensure it'll always pass
       - name: create amplify env
         run: |
           aws amplify create-branch \
-            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --app-id ${{ env.amplify_app_id }} \
             --branch-name ${{ inputs.branch_name }} \
             || true
 
       - name: deploy amplify from s3
         run: |
           aws amplify start-deployment \
-            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --app-id ${{ env.amplify_app_id }} \
             --branch-name ${{ inputs.branch_name }} \
-            --source-url https://s3.${{ env.AWS_REGION }}.amazonaws.com/gucosme.dev/${{ inputs.package_name }}
+            --source-url https://s3.${{ env.aws_region }}.amazonaws.com/gucosme.dev/${{ inputs.package_name }}
 
   update-domains:
     runs-on: ubuntu-latest
@@ -56,7 +65,7 @@ jobs:
         id: get_domains
         run: |
           domains=$(aws amplify get-domain-association \
-            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --app-id ${{ env.amplify_app_id }} \
             --domain-name ${{ inputs.domain_name }} \
             | jq '
               [.domainAssociation.subDomains[].subDomainSetting | { prefix: (.prefix // ""), branchName }] |
@@ -70,6 +79,6 @@ jobs:
       - name: update domain associations
         run: |
           aws amplify update-domain-association \
-            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --app-id ${{ env.amplify_app_id }} \
             --domain-name ${{ inputs.domain_name }} \
             --sub-domain-settings '${{ steps.get_domains.outputs.domains }}'
