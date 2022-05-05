@@ -1,0 +1,89 @@
+name: amplify-deploy
+
+# Controls when the workflow will run
+on:
+  workflow_call:
+    inputs:
+      environment: 
+        required: true
+        type: string
+      package_name:
+        description: 'Name for the generated build zip that will be uploaded to S3'
+        required: true
+        type: string
+      branch_name:
+        description: 'Amplify "branch" name'
+        required: true
+        type: string
+      domain_name:
+        description: 'Amplify app configured domain'
+        required: true
+        type: string
+    secrets:
+      AMPLIFY_APP_ID:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: false
+
+jobs:
+  deploy-branch:
+    runs-on: ubuntu-latest
+
+    environment: ${{ inputs.environment }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+
+    steps:
+      # this step will fail if the branch already exists
+      # so we return 'true' to ensure it'll always pass
+      - name: create amplify env
+        run: |
+          aws amplify create-branch \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --branch-name ${{ inputs.branch_name }} \
+            || true
+
+      - name: deploy amplify from s3
+        run: |
+          aws amplify start-deployment \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --branch-name ${{ inputs.branch_name }} \
+            --source-url https://s3.${{ secrets.AWS_REGION }}.amazonaws.com/gucosme.dev/${{ inputs.package_name }}
+
+  update-domains:
+    runs-on: ubuntu-latest
+    needs: [deploy-branch]
+
+    environment: ${{ inputs.environment }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+    steps:
+      - name: get existing domain associations
+        id: get_domains
+        run: |
+          domains=$(aws amplify get-domain-association \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --domain-name ${{ inputs.domain_name }} \
+            | jq '
+              [.domainAssociation.subDomains[].subDomainSetting | { prefix: (.prefix // ""), branchName }] |
+              . |= (map(.branchName) | index("${{ inputs.branch_name }}")) as $ix |
+              if $ix == null then
+                . + [{branchName: "${{ inputs.branch_name }}", prefix: "${{ inputs.branch_name }}"}]
+              else . end
+            ' -c)
+          echo "::set-output name=domains::$domains"
+            
+      - name: update domain associations
+        run: |
+          aws amplify update-domain-association \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --domain-name ${{ inputs.domain_name }} \
+            --sub-domain-settings '${{ steps.get_domains.outputs.domains }}'
